@@ -5,3 +5,7 @@
 - Check for Invalid URL
 - Check for domain error
 - Enforce https, ssl
+- Shorten the URL
+
+#### The ResolveURL function
+- Takes the shortened url and redirects to the destination link
