@@ -8,7 +8,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/internal/uuid"
+	"github.com/google/uuid"
 	"github.com/leksyking/URL-shortener/database"
 	"github.com/leksyking/URL-shortener/helpers"
 )
