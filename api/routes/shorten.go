@@ -8,6 +8,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/internal/uuid"
 	"github.com/leksyking/URL-shortener/database"
 	"github.com/leksyking/URL-shortener/helpers"
 )
@@ -44,7 +45,7 @@ func ShortenURL(c *fiber.Ctx) error {
 		valInt, _ := strconv.Atoi(val)
 		if valInt <= 0 {
 			limit, _ := r2.TTL(database.Ctx, c.IP()).Result()
-			c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 				"error":            "Rate limit exceeded",
 				"rate_limit_reset": limit / time.Nanosecond / time.Minute,
 			})
@@ -62,5 +63,31 @@ func ShortenURL(c *fiber.Ctx) error {
 	//enforce https, ssl
 	body.URL = helpers.EnforceHTTP(body.URL)
 
+	var id string
+
+	if body.CustomShort == "" {
+		id = uuid.New().String()[:6]
+	} else {
+		id = body.CustomShort
+	}
+
+	r := database.CreateClient(0)
+	defer r.Close()
+
+	val, _ = r.Get(database.Ctx, id).Result()
+	if val != "" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "URL custom short is already in use",
+		})
+	}
+	if body.Expiry == 0 {
+		body.Expiry = 24
+	}
+	err = r.Set(database.Ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Unable to connect to server",
+		})
+	}
 	r2.Decr(database.Ctx, c.IP())
 }
